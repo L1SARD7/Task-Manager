@@ -6,6 +6,11 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
 
+interface TaskAggregationResult {
+  _id: string;
+  count: number;
+}
+
 @Injectable()
 export class TasksService {
   constructor(@InjectModel(Task.name) private taskModel: Model<TaskDocument>) {}
@@ -113,5 +118,40 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
     return updatedTask;
+  }
+
+  async getUserStatistics(userId: string) {
+    const userObjectId = new Types.ObjectId(userId);
+
+    const stats = await this.taskModel
+      .aggregate<TaskAggregationResult>([
+        {
+          $match: {
+            $or: [{ creatorId: userObjectId }, { assigneeId: userObjectId }],
+          },
+        },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+          },
+        },
+      ])
+      .exec();
+
+    const formattedStats = stats.reduce(
+      (acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    const total = stats.reduce((sum, curr) => sum + curr.count, 0);
+
+    return {
+      totalTasks: total,
+      byStatus: formattedStats,
+    };
   }
 }

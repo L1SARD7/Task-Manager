@@ -37,6 +37,11 @@ export class TasksController {
     return this.tasksService.findAll(filterDto);
   }
 
+  @Get('analytics/stats')
+  getStatistics(@CurrentUser('userId') userId: string) {
+    return this.tasksService.getUserStatistics(userId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.tasksService.findOne(id);
