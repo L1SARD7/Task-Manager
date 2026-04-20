@@ -41,12 +41,16 @@ export class TasksService {
       order,
       page,
       limit,
+      lat,
+      lng,
+      radius,
     } = filterDto;
+
     const query: Record<string, any> = {};
 
-    if (projectId) query.projectId = new Types.ObjectId(projectId);
+    if (projectId) query.projectId = projectId;
     if (status) query.status = status;
-    if (assigneeId) query.assigneeId = new Types.ObjectId(assigneeId);
+    if (assigneeId) query.assigneeId = assigneeId;
     if (tag) query.tags = tag;
 
     if (search) {
@@ -58,6 +62,18 @@ export class TasksService {
       if (deadlineFrom) deadlineQuery.$gte = new Date(deadlineFrom);
       if (deadlineTo) deadlineQuery.$lte = new Date(deadlineTo);
       query.deadline = deadlineQuery;
+    }
+
+    if (lat !== undefined && lng !== undefined) {
+      query.location = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [lng, lat],
+          },
+          $maxDistance: radius,
+        },
+      };
     }
 
     const sortOptions: Record<string, 1 | -1> = {};
